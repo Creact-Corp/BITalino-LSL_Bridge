@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
         lsl::stream_outlet outlet_rawECG(info_rawECG);
 
         // 100Hz A1
-        dev.start(100, { 5 });
+        dev.start(100, { 0 });
 
         BITalino::VFrame frames(1);
         float sample[1];
