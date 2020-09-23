@@ -1,3 +1,22 @@
+/*
+    LSL_Bridge
+    Copyright (C) 2020  Creact
+    Copyright (C) 2020  Ullo Labs
+    
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include "bitalino.h"
 #include "lsl_cpp.h"
 
@@ -107,7 +126,7 @@ int main(int argc, char* argv[])
         cout << ver.c_str() << endl;
 
         // make a new stream_info
-        lsl::stream_info info(lslname.c_str(), "heartrate", 1, 100, lsl::cf_float32, "bitalinoHR_" + macAddress);
+        lsl::stream_info info(lslname.c_str(), "heartrate", 1, 0, lsl::cf_float32, "bitalinoHR_" + macAddress);
         lsl::stream_info info_rawECG("test", "rawECG",1, 100, lsl::cf_float32, "bitalinoECG_" + macAddress);
 
         // make a new outlet
