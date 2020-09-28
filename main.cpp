@@ -1,7 +1,7 @@
 /*
     LSL_Bridge
     Copyright (C) 2020  Creact
-    Copyright (C) 2020  Ullo Labs
+    Copyright (C) 2020  Ullo
     
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
