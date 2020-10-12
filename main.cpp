@@ -139,9 +139,9 @@ int main(int argc, char* argv[])
         
         int opt;
         opterr = 0;
-        while((opt = getopt(argc, argv, "hrec")) != -1)
+        while ((opt = getopt(argc, argv, "hrec")) != -1)
         {
-            switch(opt)
+            switch (opt)
             {
                 case 'h': hr_enable = true; break;      // HeartRate
                 case 'r': resp_enable = true; break;    // Respiration
@@ -167,26 +167,29 @@ int main(int argc, char* argv[])
         cout << ver.c_str() << endl;
         
         // make a new stream_info & outlet
-        lsl::stream_info *info_hr, *info_resp, *info_eeg, *info_ecg;
-        lsl::stream_outlet *outlet_hr, *outlet_resp, *outlet_eeg, *outlet_ecg;
-        if(hr_enable)
+        lsl::stream_info *info_hr, *info_resp, *info_eeg,*info_alpha, *info_ecg;
+        lsl::stream_outlet *outlet_hr, *outlet_resp, *outlet_eeg, *outlet_alpha, *outlet_ecg;
+        if (hr_enable)
         {
             info_hr = new lsl::stream_info(lslname.c_str(), "heartrate", 1, 0, lsl::cf_float32, "bitalinoHR_" + macAddress);
             outlet_hr = new lsl::stream_outlet(*info_hr);
         }
-        if(resp_enable)
+
+        if (resp_enable)
         {
             info_resp = new lsl::stream_info(lslname.c_str(), "breathingamp", 3, 10, lsl::cf_float32, "bitalinoResp_" + macAddress);
             outlet_resp = new lsl::stream_outlet(*info_resp);
         }
-        if(eeg_enable)
+        if (eeg_enable)
         {
-            info_eeg = new lsl::stream_info("test", "EEG", 1, 100, lsl::cf_float32, "bitalinoEEG_" + macAddress);
+            info_eeg = new lsl::stream_info(lslname.c_str(), "RAW_EEG", 1, 100, lsl::cf_float32, "bitalinoEEG_" + macAddress);
             outlet_eeg = new lsl::stream_outlet(*info_eeg);
+            info_alpha = new lsl::stream_info(lslname.c_str(), "NFB_alpha", 1, 10, lsl::cf_float32, "bitalinoAlpha_" + macAddress);
+            outlet_alpha = new lsl::stream_outlet(*info_alpha);
         }
-        if(ecg_enable)
+        if (ecg_enable)
         {
-            info_ecg = new lsl::stream_info("test", "ECG",1, 100, lsl::cf_float32, "bitalinoECG_" + macAddress);
+            info_ecg = new lsl::stream_info(lslname.c_str(), "RAW_ECG",1, 100, lsl::cf_float32, "bitalinoECG_" + macAddress);
             outlet_ecg = new lsl::stream_outlet(*info_ecg);
         }
         
@@ -198,7 +201,10 @@ int main(int argc, char* argv[])
         float lslSample_resp[3];
         float lslSample_ecg[1];
         float lslSample_eeg[1];
+        float lslSample_alpha[1];
         
+        cout << "Press Enter to exit." << endl;
+            
         do
         {
             // count timing
@@ -216,7 +222,7 @@ int main(int argc, char* argv[])
             bool beat = updateECG(data_ecg);
             
             // new beat
-            if(beat and !isECGing)
+            if (beat and !isECGing)
             {
                 // start of new QRS complex
                 isECGing = true;
@@ -232,7 +238,7 @@ int main(int argc, char* argv[])
                 printf("Beat!\n");
                 
                 // send LSL HRdata
-                if(hr_enable)
+                if (hr_enable)
                 {
                     lslSample_hr[0] = hr_insta;
                     outlet_hr->push_sample(lslSample_hr);
@@ -240,15 +246,15 @@ int main(int argc, char* argv[])
             }
             
             // refractory time before new beat
-            if(isECGing and tick - tick_ecg_start > ecg_time) 
+            if (isECGing and tick - tick_ecg_start > ecg_time) 
             {
                 isECGing = false;
             }
             
             // send LSL Resp 10Hz
-            if(resp_enable)
+            if (resp_enable)
             {
-                if(tick % 10 == 0)
+                if (tick % 10 == 0)
                 {
                     lslSample_resp[0] = data_resp;
                     lslSample_resp[1] = (float)data_resp / 1023.0f;
@@ -258,41 +264,52 @@ int main(int argc, char* argv[])
             }
             
             // send LSL EEG
-            if(eeg_enable)
+            if (eeg_enable)
             {
+                // RAW
                 lslSample_eeg[0] = data_eeg;
                 outlet_eeg->push_sample(lslSample_eeg);
+                
+                // Alpha
+                lslSample_alpha[0] = 0;
+                outlet_alpha->push_sample(lslSample_alpha);
             }
             
             // send LSL ECG
-            if(ecg_enable)
+            if (ecg_enable)
             {
                 lslSample_ecg[0] = data_ecg;
                 outlet_ecg->push_sample(lslSample_ecg);
             }
 
-            cout << " Time:" << to_string(tick) <<  " lsl_HR:" << to_string(lslSample_hr[0]) << " ECG:" << to_string(data_ecg) << " RESP:" << to_string(data_resp) <<endl;
+            cout << " Time:" << to_string(tick) <<  
+                    " HR:" << to_string(lslSample_hr[0]) << 
+                    " ECG:" << to_string(data_ecg) << 
+                    " RESP:" << to_string(data_resp)  << 
+                    " EEG:" << to_string(data_eeg) <<endl;
             
-        } while(!keypressed()); // Press Enter to exit.
+        } while (!keypressed()); // Press Enter to exit.
         
         dev.stop();
         
-        if(hr_enable)
+        if (hr_enable)
         {
             delete outlet_hr;
             delete info_hr;
         }
-        if(resp_enable)
+        if (resp_enable)
         {
             delete outlet_resp;
             delete info_resp;
         }
-        if(eeg_enable)
+        if (eeg_enable)
         {
             delete outlet_eeg;
             delete info_eeg;
+            delete outlet_alpha;
+            delete info_alpha;
         }
-        if(ecg_enable)
+        if (ecg_enable)
         {
             delete outlet_ecg;
             delete info_ecg;
