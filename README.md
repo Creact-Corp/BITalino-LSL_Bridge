@@ -2,7 +2,7 @@
 
 The biological signal acquired by BITalino is output by the LSL stream.  
 You can use BITalino as a sensor for your Echo device.  
-The ECG and Respiratoin(PZT) sensor are supported.(EEG is not yet implemented.)  
+The ECG and Respiratoin(PZT) and EEG sensor are supported.
 This program runs on raspberry pi.  
 
 ## Build
@@ -28,3 +28,4 @@ lsl_bridge [BITalino's MacAddress] [LSL name] [sensors]
 	[sensors] Select the sensor to use.  
 		-h  Use HeartRate.(Connect ECG Sensor to A1 of BITalino)  
 		-r  Use Respiration.(Connect PZT Sensor to A2 of BITalino)  
+		-e  Use EEG Alpha.(Connect EEG Sensor to A3 of BITalino)  

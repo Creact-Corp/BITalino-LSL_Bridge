@@ -98,6 +98,59 @@ bool updateECG(long ecg_raw) {
   return beating;
 }
 
+// =============================================================================
+
+class filter
+{
+public:
+    filter(int samplingRate, int hf, int lf)
+    {
+        filter_highpass = new HighPassFilter<long>(samplingRate, hf);
+        filter_lowpass = new ButterworthFilter<long>(samplingRate, lf);
+    }
+    
+    long update(long rawdata)
+    {
+        bandpass_prev = bandpass;
+        filter_highpass->step(rawdata);
+        filter_lowpass->step(filter_highpass->getValue());
+        bandpass = filter_lowpass->getValue();
+        
+        long derivative = bandpass - bandpass_prev;
+        
+        long power = derivative * derivative;
+        
+        smoothing.push_back(power);
+        long smoothed = smoothing.mean();
+        
+        decimation_n++;
+        if(decimation_n >= decimation)
+        {
+            decimation_n = 0;
+            trend.push_back(smoothed);
+        }
+        
+        return trend.max();
+    }
+    
+private:
+    long bandpass = 0;
+    long bandpass_prev = 0;
+    
+    int decimation_n = 0;
+    
+    Circular_Buffer<long, 8> smoothing;
+    
+    const unsigned int decimation = 8;
+    Circular_Buffer<long, 32> trend;
+    
+    HighPassFilter<long> *filter_highpass;
+    ButterworthFilter<long> *filter_lowpass;
+    
+};
+
+// =============================================================================
+
 bool keypressed(void)
 {
     fd_set readfds;
@@ -117,6 +170,7 @@ void description(void)
     cout << "   [Sensors] Select the sensor to use." << endl;
     cout << "       -h  Use HeartRate.(Connect ECG Sensor to A1 of BITalino)" << endl;
     cout << "       -r  Use Respiration.(Connect PZT Sensor to A2 of BITalino)" << endl;
+    cout << "       -e  Use EEG Alpha.(Connect EEG Sensor to A3 of BITalino)" << endl;
     cout << "Example: ./lsl_bridge 20:16:07:18:14:06 echopink -hr" << endl;
 }
 
@@ -182,9 +236,9 @@ int main(int argc, char* argv[])
         }
         if (eeg_enable)
         {
-            info_eeg = new lsl::stream_info(lslname.c_str(), "RAW_EEG", 1, 100, lsl::cf_float32, "bitalinoEEG_" + macAddress);
-            outlet_eeg = new lsl::stream_outlet(*info_eeg);
-            info_alpha = new lsl::stream_info(lslname.c_str(), "NFB_alpha", 1, 10, lsl::cf_float32, "bitalinoAlpha_" + macAddress);
+            //info_eeg = new lsl::stream_info(lslname.c_str(), "RAW_EEG", 1, 100, lsl::cf_float32, "bitalinoEEG_" + macAddress);
+            //outlet_eeg = new lsl::stream_outlet(*info_eeg);
+            info_alpha = new lsl::stream_info(lslname.c_str(), "NFB_alpha", 1, 100, lsl::cf_float32, "bitalinoAlpha_" + macAddress);
             outlet_alpha = new lsl::stream_outlet(*info_alpha);
         }
         if (ecg_enable)
@@ -204,6 +258,8 @@ int main(int argc, char* argv[])
         float lslSample_alpha[1];
         
         cout << "Press Enter to exit." << endl;
+        
+        filter alpha(100, 8, 12);
             
         do
         {
@@ -263,16 +319,21 @@ int main(int argc, char* argv[])
                 }
             }
             
+            //long eeg_alpha = updateEEG(data_eeg);
+            
             // send LSL EEG
             if (eeg_enable)
             {
                 // RAW
                 lslSample_eeg[0] = data_eeg;
-                outlet_eeg->push_sample(lslSample_eeg);
+                //outlet_eeg->push_sample(lslSample_eeg);
                 
                 // Alpha
-                lslSample_alpha[0] = 0;
+                long eeg_alpha = alpha.update(data_eeg) / 10;
+                if(eeg_alpha > 100) { eeg_alpha = 100; }
+                lslSample_alpha[0] = (float)eeg_alpha * 0.01f;
                 outlet_alpha->push_sample(lslSample_alpha);
+                
             }
             
             // send LSL ECG
@@ -286,7 +347,8 @@ int main(int argc, char* argv[])
                     " HR:" << to_string(lslSample_hr[0]) << 
                     " ECG:" << to_string(data_ecg) << 
                     " RESP:" << to_string(data_resp)  << 
-                    " EEG:" << to_string(data_eeg) <<endl;
+                    " EEG:" << to_string(data_eeg) << 
+                    " Alpha:" << to_string(lslSample_alpha[0]) << endl;
             
         } while (!keypressed()); // Press Enter to exit.
         
@@ -304,8 +366,8 @@ int main(int argc, char* argv[])
         }
         if (eeg_enable)
         {
-            delete outlet_eeg;
-            delete info_eeg;
+            //delete outlet_eeg;
+            //delete info_eeg;
             delete outlet_alpha;
             delete info_alpha;
         }
